@@ -1,0 +1,100 @@
+# Python CI workflow for forked-u-onex
+# Runs linting (flake8), security checks (bandit), and tests (pytest)
+# on push and pull requests targeting main branch
+
+name: Python CI
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - '**.py'
+      - '.github/workflows/python-ci.yml'
+      - 'requirements*.txt'
+      - 'setup.py'
+      - 'pyproject.toml'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - '**.py'
+      - '.github/workflows/python-ci.yml'
+      - 'requirements*.txt'
+      - 'setup.py'
+      - 'pyproject.toml'
+
+# Minimal permissions for security
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        # Test across multiple Python versions and operating systems
+        python-version: ['3.8', '3.9', '3.10', '3.11']
+        os: [ubuntu-latest, macos-latest, windows-latest]
+      fail-fast: false
+    
+    steps:
+    # Checkout the repository code
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    # Setup Python environment with specified version
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+    
+    # Install dependencies for linting, security, and testing
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 bandit pytest
+        # Install any project dependencies if they exist
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+      shell: bash
+    
+    # Lint Python code with flake8
+    - name: Lint with flake8
+      run: |
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Exit-zero treats all errors as warnings. Line length set to 88 chars (Black compatible)
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=88 --statistics
+    
+    # Security check with bandit
+    - name: Security check with bandit
+      run: |
+        # Run bandit security checks on Python files
+        bandit -r . -f json -o bandit-report.json || true
+        bandit -r . --severity-level medium
+    
+    # Run tests with pytest
+    - name: Test with pytest
+      run: |
+        # Run pytest with verbose output and coverage if tests exist
+        if [ -d tests/ ] || find . -name "test_*.py" -o -name "*_test.py" | grep -q .; then
+          pytest -v --tb=short
+        else
+          echo "No tests found - running basic import tests"
+          python -c "import dependency_checker; print('✅ dependency_checker imports successfully')"
+          python -c "import sandbox_runner; print('✅ sandbox_runner imports successfully')"
+          python dependency_checker.py
+          python sandbox_runner.py
+        fi
+      shell: bash
+    
+    # Upload bandit security report as artifact
+    - name: Upload bandit report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: bandit-report-${{ matrix.python-version }}-${{ matrix.os }}
+        path: bandit-report.json
+        retention-days: 30

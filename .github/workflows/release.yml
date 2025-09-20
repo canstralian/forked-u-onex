@@ -1,0 +1,123 @@
+# Release workflow for forked-u-onex
+# Drafts a release when a tag is pushed, summarizing changes since last release
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'    # Trigger on version tags (e.g., v1.0.0, v2.1.3)
+      - '*.*.*' # Also trigger on semantic version tags (e.g., 1.0.0, 2.1.3)
+
+# Minimal permissions needed for creating releases
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  draft-release:
+    name: Draft Release
+    runs-on: ubuntu-latest
+    
+    steps:
+    # Checkout the repository code with full history for changelog generation
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch full history for changelog generation
+    
+    # Generate release notes by comparing with previous tag
+    - name: Generate Release Notes
+      id: release_notes
+      run: |
+        echo "🏷️ Current tag: ${{ github.ref_name }}"
+        
+        # Find the previous tag
+        PREVIOUS_TAG=$(git tag --sort=-version:refname | grep -v "^${{ github.ref_name }}$" | head -n 1)
+        
+        if [ -z "$PREVIOUS_TAG" ]; then
+          echo "📝 No previous tag found, generating release notes from first commit"
+          PREVIOUS_TAG=$(git rev-list --max-parents=0 HEAD)
+        else
+          echo "📝 Previous tag: $PREVIOUS_TAG"
+        fi
+        
+        # Generate changelog
+        echo "## 🚀 What's Changed" > release_notes.md
+        echo "" >> release_notes.md
+        
+        # Get commits since last tag
+        if [ "$PREVIOUS_TAG" != "$(git rev-list --max-parents=0 HEAD)" ]; then
+          git log --pretty=format:"- %s (%h)" "${PREVIOUS_TAG}..HEAD" >> release_notes.md
+        else
+          git log --pretty=format:"- %s (%h)" HEAD >> release_notes.md
+        fi
+        
+        echo "" >> release_notes.md
+        echo "## 📋 Files in this release" >> release_notes.md
+        echo "" >> release_notes.md
+        echo "- **onex**: Main hacking tools installer script" >> release_notes.md
+        echo "- **dependency_checker.py**: Robust pre-flight dependency checker" >> release_notes.md
+        echo "- **sandbox_runner.py**: Example dependency checker usage" >> release_notes.md
+        echo "- **automate_workflow.sh**: Workflow automation script" >> release_notes.md
+        echo "- **install**: Installation script" >> release_notes.md
+        echo "" >> release_notes.md
+        echo "## 🔧 Installation" >> release_notes.md
+        echo "" >> release_notes.md
+        echo '```bash' >> release_notes.md
+        echo "# Download and install" >> release_notes.md
+        echo "wget https://github.com/canstralian/forked-u-onex/archive/${{ github.ref_name }}.tar.gz" >> release_notes.md
+        echo "tar -xzf ${{ github.ref_name }}.tar.gz" >> release_notes.md
+        echo "cd forked-u-onex-*" >> release_notes.md
+        echo "chmod +x install && ./install" >> release_notes.md
+        echo '```' >> release_notes.md
+        echo "" >> release_notes.md
+        echo "## ⚠️ Security Notice" >> release_notes.md
+        echo "" >> release_notes.md
+        echo "This tool is designed for educational and authorized security testing purposes only." >> release_notes.md
+        echo "Please use responsibly and in accordance with applicable laws and regulations." >> release_notes.md
+        
+        # Set output for next step
+        echo "release_notes_file=release_notes.md" >> $GITHUB_OUTPUT
+    
+    # Create draft release with generated notes
+    - name: Create Draft Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref_name }}
+        release_name: "Release ${{ github.ref_name }}"
+        body_path: release_notes.md
+        draft: true
+        prerelease: false
+    
+    # Upload release artifacts (optional)
+    - name: Create Release Archive
+      run: |
+        # Create a clean archive of the release
+        mkdir -p release-artifacts
+        
+        # Create source archive excluding .git and other unnecessary files
+        tar --exclude='.git' \
+            --exclude='.github' \
+            --exclude='*.pyc' \
+            --exclude='__pycache__' \
+            --exclude='.pytest_cache' \
+            -czf "release-artifacts/forked-u-onex-${{ github.ref_name }}.tar.gz" \
+            .
+        
+        # Create checksums
+        cd release-artifacts
+        sha256sum "forked-u-onex-${{ github.ref_name }}.tar.gz" > "forked-u-onex-${{ github.ref_name }}.sha256"
+        
+        echo "📦 Release artifacts created:"
+        ls -la
+    
+    # Upload artifacts to the release
+    - name: Upload Release Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: release-artifacts-${{ github.ref_name }}
+        path: release-artifacts/
+        retention-days: 90
