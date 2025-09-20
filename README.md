@@ -23,17 +23,55 @@ onex works on any of the following operating systems:<br>
 
 ## How to Install
 
-Open the terminal and type following commands.
+To get started with the Onex Pentesting Lab, you need to install the Onex tool. These instructions are for Debian-based Linux distributions (like Ubuntu or Kali Linux) and Termux on Android.
 
-* `apt update`
+#### 1. Update Your Package Lists
 
-* `apt install git`
+First, open your terminal and update your system's package lists to ensure you have the latest versions:
 
-* `git clone https://github.com/jackind424/onex.git`
+```bash
+apt update
+```
 
-* `chmod +x onex/install`
+#### 2. Install Git
 
-* `sh onex/install` if not work than use `./onex/install`
+Next, you'll need to install Git, which is a version control system used to download the Onex repository:
+
+```bash
+apt install git
+```
+
+#### 3. Clone the Onex Repository
+
+Now, you can clone the Onex repository from GitHub to your local machine:
+
+```bash
+git clone https://github.com/canstralian/forked-u-onex.git
+```
+
+#### 4. Make the Installation Script Executable
+
+After cloning the repository, you need to give the installation script the necessary permissions to run:
+
+```bash
+chmod +x forked-u-onex/install
+```
+
+#### 5. Run the Installation Script
+
+Finally, you can run the installation script to set up Onex on your system:
+
+```bash
+sh forked-u-onex/install
+```
+
+If the above command doesn't work, you can try running it with `./` at the beginning:
+
+```bash
+./forked-u-onex/install
+```
+
+Once the installation is complete, you can start using Onex to install and manage your security tools. For a full list of commands and options, you can use the `onex help` command.
 
 ------------------------------------------------------------------------
 
