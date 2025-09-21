@@ -1,0 +1,63 @@
+# Shell Script Lint workflow for forked-u-onex
+# Uses shellcheck to lint all shell scripts on push and pull requests
+
+name: Shell Script Lint
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - '**.sh'
+      - '.github/workflows/shellcheck.yml'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - '**.sh'
+      - '.github/workflows/shellcheck.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: Run ShellCheck
+        run: |
+          echo "🔍 Finding shell scripts to lint..."
+          # Find all .sh files
+          find . -name "*.sh" -type f | while read -r script; do
+            echo "📝 Linting: $script"
+            shellcheck "$script"
+          done
+          # Also check files with shell shebangs that don't end in .sh
+          find . -type f -exec grep -Il '^#!/.*sh' {} \; | grep -v '\.sh$' | while read -r script; do
+            echo "📝 Linting shell script: $script"
+            shellcheck "$script"
+          done
+          echo "✅ ShellCheck completed successfully!"
+
+      - name: Run ShellCheck (SARIF)
+        run: |
+          # Generate JSON report for SARIF conversion
+          shellcheck -f json1 $(find . -name "*.sh" -type f) > shellcheck-report.json || true
+          echo "📊 ShellCheck report generated"
+        continue-on-error: true
+
+      - name: Upload ShellCheck report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shellcheck-report
+          path: shellcheck-report.json
+          retention-days: 30

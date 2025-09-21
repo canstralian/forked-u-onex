@@ -1,5 +1,9 @@
 # Onex
 
+[![Python CI](https://github.com/canstralian/forked-u-onex/actions/workflows/python-ci.yml/badge.svg)](https://github.com/canstralian/forked-u-onex/actions/workflows/python-ci.yml)
+[![Shell Script Lint](https://github.com/canstralian/forked-u-onex/actions/workflows/shellcheck.yml/badge.svg)](https://github.com/canstralian/forked-u-onex/actions/workflows/shellcheck.yml)
+[![Release](https://github.com/canstralian/forked-u-onex/actions/workflows/release.yml/badge.svg)](https://github.com/canstralian/forked-u-onex/actions/workflows/release.yml)
+
 ***"onex a hacking tools library."***
 Onex is a kali linux hacking tools installer for termux and other linux distribution. It's package manager for hacker's.
 onex manage large number's of hacking tools that can be installed on single click. Using onex, you can install all hacking tools in Termux and other Linux based distributions.
